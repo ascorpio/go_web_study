@@ -1,5 +1,5 @@
-module go_web_study
+module goblog
 
 go 1.19
 
-require github.com/gorilla/mux v1.8.0 // indirect
+require github.com/gorilla/mux v1.8.0
