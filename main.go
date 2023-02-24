@@ -3,16 +3,14 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"strings"
 )
 
-func handlerFunc(w http.ResponseWriter, r *http.Request) {
+func defaultHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	switch r.URL.Path {
 	case "/":
 		_, _ = fmt.Fprint(w, "<h1>Hello, 这里是 goblog 啊哈哈哈哈</h1>")
-	case "/about":
-		_, _ = fmt.Fprint(w, "此博客是用以记录编程笔记，如您有反馈或建议，请联系 "+
-			"<a href=\"mailto:summer@example.com\">summer@example.com</a>")
 	default:
 		w.WriteHeader(http.StatusNotFound)
 		_, _ = fmt.Fprint(w, "<h1>请求页面未找到 :(</h1>"+
@@ -20,7 +18,27 @@ func handlerFunc(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func aboutHandler(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = fmt.Fprint(w, "此博客是用以记录编程笔记，如您有反馈或建议，请联系 "+
+		"<a href=\"mailto:summer@example.com\">summer@example.com</a>")
+}
+
 func main() {
-	http.HandleFunc("/", handlerFunc)
-	_ = http.ListenAndServe(":3000", nil)
+	router := http.NewServeMux()
+	router.HandleFunc("/", defaultHandler)
+	router.HandleFunc("/about", aboutHandler)
+	router.HandleFunc("/articles", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "GET":
+			_, _ = fmt.Fprint(w, "文章列表")
+		case "POST":
+			_, _ = fmt.Fprint(w, "创建新的文章")
+		}
+	})
+	router.HandleFunc("/articles/", func(w http.ResponseWriter, r *http.Request) {
+		id := strings.SplitN(r.URL.Path, "/", 3)[2]
+		_, _ = fmt.Fprint(w, "文章ID:"+id)
+	})
+	_ = http.ListenAndServe(":3000", router)
 }
