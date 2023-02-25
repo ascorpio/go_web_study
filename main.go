@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"net/http"
+	"strings"
 )
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
@@ -34,11 +35,23 @@ func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = fmt.Fprint(w, "创建新的文章")
 }
 
+// 设置标头中间件
 func forceHTMLMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// 1. 在设置标头
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		// 2. 继续执行请求
+		next.ServeHTTP(w, r)
+	})
+}
+
+// 移除url尾部多余斜杠
+func removeTrailingSlash(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// 除首页以外，移除所有请求路径后面的斜杆
+		if r.URL.Path != "/" {
+			r.URL.Path = strings.TrimSuffix(r.URL.Path, "/")
+		}
 		next.ServeHTTP(w, r)
 	})
 }
@@ -66,5 +79,5 @@ func main() {
 	articleURL, _ := router.Get("article.show").URL("id", "23")
 	fmt.Println("articleURL:", articleURL)
 
-	_ = http.ListenAndServe(":3000", router)
+	_ = http.ListenAndServe(":3000", removeTrailingSlash(router))
 }
