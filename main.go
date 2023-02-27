@@ -4,23 +4,21 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"net/http"
+	"strings"
 )
 
 var router = mux.NewRouter()
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = fmt.Fprint(w, "<h1>Hello, 这里是 goblog 啊哈哈哈哈</h1>")
 }
 
 func aboutHandler(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = fmt.Fprint(w, "此博客是用以记录编程笔记，如您有反馈或建议，请联系 "+
 		"<a href=\"mailto:summer@example.com\">summer@example.com</a>")
 }
 
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusNotFound)
 	_, _ = fmt.Fprint(w, "<h1>请求页面未找到 :(</h1><p>如有疑惑，请联系我们。</p>")
 }
@@ -37,6 +35,27 @@ func articlesIndexHandler(w http.ResponseWriter, r *http.Request) {
 
 func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = fmt.Fprint(w, "创建新的文章")
+}
+
+// 设置标头中间件
+func forceHTMLMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// 1. 在设置标头
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		// 2. 继续执行请求
+		next.ServeHTTP(w, r)
+	})
+}
+
+// 移除url尾部多余斜杠
+func removeTrailingSlash(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// 除首页以外，移除所有请求路径后面的斜杆
+		if r.URL.Path != "/" {
+			r.URL.Path = strings.TrimSuffix(r.URL.Path, "/")
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func articleCreateHandler(w http.ResponseWriter, r *http.Request) {
@@ -71,6 +90,9 @@ func main() {
 	// 自定义 404 页面
 	router.NotFoundHandler = http.HandlerFunc(notFoundHandler)
 
+	// 中间件：强制内容类型为 HTML
+	router.Use(forceHTMLMiddleware)
+
 	// 通过命名路由获取 URL 示例
 	homeUrl, _ := router.Get("home").URL()
 	fmt.Println("homeURL:", homeUrl)
@@ -78,5 +100,5 @@ func main() {
 	articleURL, _ := router.Get("articles.show").URL("id", "23")
 	fmt.Println("articleURL:", articleURL)
 
-	_ = http.ListenAndServe(":3000", router)
+	_ = http.ListenAndServe(":3000", removeTrailingSlash(router))
 }
