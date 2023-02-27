@@ -10,31 +10,65 @@ import (
 var router = mux.NewRouter()
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	_, _ = fmt.Fprint(w, "<h1>Hello, 这里是 goblog 啊哈哈哈哈</h1>")
+	fmt.Fprint(w, "<h1>Hello, 这里是 goblog 啊哈哈哈哈</h1>")
 }
 
 func aboutHandler(w http.ResponseWriter, _ *http.Request) {
-	_, _ = fmt.Fprint(w, "此博客是用以记录编程笔记，如您有反馈或建议，请联系 "+
+	fmt.Fprint(w, "此博客是用以记录编程笔记，如您有反馈或建议，请联系 "+
 		"<a href=\"mailto:summer@example.com\">summer@example.com</a>")
 }
 
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
-	_, _ = fmt.Fprint(w, "<h1>请求页面未找到 :(</h1><p>如有疑惑，请联系我们。</p>")
+	fmt.Fprint(w, "<h1>请求页面未找到 :(</h1><p>如有疑惑，请联系我们。</p>")
 }
 
 func articlesShowHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
-	_, _ = fmt.Fprint(w, "文章 ID："+id)
+	fmt.Fprint(w, "文章 ID："+id)
 }
 
 func articlesIndexHandler(w http.ResponseWriter, r *http.Request) {
-	_, _ = fmt.Fprint(w, "访问文章列表")
+	fmt.Fprint(w, "访问文章列表")
 }
 
 func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
-	_, _ = fmt.Fprint(w, "创建新的文章")
+	err := r.ParseForm()
+	if err != nil {
+		fmt.Fprint(w, "请提供正确的数据！")
+		return
+	}
+	title := r.PostForm.Get("title")
+
+	fmt.Fprintf(w, "POST PostForm: %v <br>", r.PostForm)
+	fmt.Fprintf(w, "POST Form: %v <br>", r.Form)
+	fmt.Fprintf(w, "title 的值为: %v", title)
+
+	fmt.Fprintf(w, "r.Form 中 title 的值为: %v <br>", r.FormValue("title"))
+	fmt.Fprintf(w, "r.PostForm 中 title 的值为: %v <br>", r.PostFormValue("title"))
+	fmt.Fprintf(w, "r.Form 中 test 的值为: %v <br>", r.FormValue("test"))
+	fmt.Fprintf(w, "r.PostForm 中 test 的值为: %v <br>", r.PostFormValue("test"))
+}
+
+func articleCreateHandler(w http.ResponseWriter, r *http.Request) {
+	html := `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>创建文章 —— 我的技术博客</title>
+</head>
+<body>
+    <form action="%s?test=data" method="post">
+        <p><input type="text" name="title"></p>
+        <p><textarea name="body" cols="30" rows="10"></textarea></p>
+        <p><button type="submit">提交</button></p>
+    </form>
+</body>
+</html>
+`
+	storeURL, _ := router.Get("articles.store").URL()
+	fmt.Fprintf(w, html, storeURL)
 }
 
 // 设置标头中间件
@@ -56,26 +90,6 @@ func removeTrailingSlash(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
-}
-
-func articleCreateHandler(w http.ResponseWriter, r *http.Request) {
-	html := `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <title>创建文章 —— 我的技术博客</title>
-</head>
-<body>
-    <form action="%s" method="post">
-        <p><input type="text" name="title"></p>
-        <p><textarea name="body" cols="30" rows="10"></textarea></p>
-        <p><button type="submit">提交</button></p>
-    </form>
-</body>
-</html>
-`
-	storeURL, _ := router.Get("articles.store").URL()
-	_, _ = fmt.Fprintf(w, html, storeURL)
 }
 
 func main() {
