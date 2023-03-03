@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"goblog/pkg/logger"
 	"goblog/pkg/route"
+	"goblog/pkg/types"
 	"html/template"
 	"net/http"
 	"net/url"
@@ -130,17 +131,12 @@ func articlesShowHandler(w http.ResponseWriter, r *http.Request) {
 		// 4. 读取成功
 		tmpl, err := template.New("show.gohtml").Funcs(template.FuncMap{
 			"RouteName2URL": route.RouteName2URL,
-			"Int64ToString": Int64ToString,
+			"Int64ToString": types.Int64ToString,
 		}).ParseFiles("resources/views/articles/show.gohtml")
 		logger.LogError(err)
 		err = tmpl.Execute(w, article)
 		logger.LogError(err)
 	}
-}
-
-// Int64ToString 将 int64 转换为 string
-func Int64ToString(num int64) string {
-	return strconv.FormatInt(num, 10)
 }
 
 func articlesEditHandler(w http.ResponseWriter, r *http.Request) {
