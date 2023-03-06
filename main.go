@@ -156,33 +156,6 @@ type ArticlesFormData struct {
 	Errors      map[string]string
 }
 
-// 创建文章
-func articleCreateHandler(w http.ResponseWriter, r *http.Request) {
-	parseArticleForm(&w, "", "", make(map[string]string))
-}
-
-// 修改文章
-func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
-	title := r.PostFormValue("title")
-	body := r.PostFormValue("body")
-
-	errors := make(map[string]string)
-
-	// 检查是否有错误
-	if len(errors) == 0 {
-		lastInsertID, err := saveArticleToDB(title, body)
-		if lastInsertID > 0 {
-			fmt.Fprint(w, "插入成功，ID为"+strconv.FormatInt(lastInsertID, 10))
-		} else {
-			logger.LogError(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "500 服务器内部错误")
-		}
-	} else {
-		parseArticleForm(&w, title, body, errors)
-	}
-}
-
 func articlesDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	id := getRouteVariable("id", r)
 
@@ -212,58 +185,6 @@ func articlesDeleteHandler(w http.ResponseWriter, r *http.Request) {
 				fmt.Fprint(w, "404 文章未找到")
 			}
 		}
-	}
-}
-
-func saveArticleToDB(title, body string) (int64, error) {
-	// 变量初始化
-	var (
-		id   int64
-		err  error
-		rs   sql.Result
-		stmt *sql.Stmt
-	)
-
-	// 1. 获取一个 prepare 声明语句
-	stmt, err = db.Prepare("insert into articles(title,body) values(?,?)")
-
-	// 错误检测
-	if err != nil {
-		return 0, err
-	}
-
-	// 2. 在此函数运行结束后关闭语句，防止占用 SQL 连接
-	defer stmt.Close()
-
-	// 3. 执行请求，传参进入绑定的内容
-	rs, err = stmt.Exec(title, body)
-	if err != nil {
-		return 0, err
-	}
-
-	// 4. 插入成功的话，会返回自增ID
-	if id, err = rs.LastInsertId(); id > 0 {
-		return id, nil
-	}
-	return 0, err
-}
-
-// 解析创建文章、修改文章模版
-func parseArticleForm(w *http.ResponseWriter, title, body string, errors map[string]string) {
-	storeURL, _ := router.Get("articles.store").URL()
-	data := ArticlesFormData{
-		Title:  title,
-		Body:   body,
-		URL:    storeURL,
-		Errors: errors,
-	}
-	tmpl, err := template.ParseFiles("resources/views/articles/create.gohtml")
-	if err != nil {
-		panic(err)
-	}
-	err = tmpl.Execute(*w, data)
-	if err != nil {
-		panic(err)
 	}
 }
 
@@ -302,8 +223,6 @@ func main() {
 	bootstrap.SetupDB()
 	router = bootstrap.SetupRoute()
 
-	router.HandleFunc("/articles", articlesStoreHandler).Methods("POST").Name("articles.store")
-	router.HandleFunc("/articles/create", articleCreateHandler).Methods("GET").Name("articles.create")
 	router.HandleFunc("/articles/{id:[0-9]+}/edit", articlesEditHandler).Methods("GET").Name("articles.edit")
 	router.HandleFunc("/articles/{id:[0-9]+}", articlesUpdateHandler).Methods("POST").Name("articles.update")
 	router.HandleFunc("/articles/{id:[0-9]+}/delete", articlesDeleteHandler).Methods("POST").Name("articles.delete")
