@@ -25,16 +25,6 @@ type Article struct {
 	Title, Body string
 }
 
-// Link 方法用来生成文章链接
-func (a Article) Link() string {
-	showURL, err := router.Get("articles.show").URL("id", strconv.FormatInt(a.ID, 10))
-	if err != nil {
-		logger.LogError(err)
-		return ""
-	}
-	return showURL.String()
-}
-
 // Delete 方法用以从数据库中删除单条记录
 func (a Article) Delete() (int64, error) {
 	rs, err := db.Exec("delete from articles where id = " + strconv.FormatInt(a.ID, 10))
@@ -157,30 +147,6 @@ func articlesUpdateHandler(w http.ResponseWriter, r *http.Request) {
 			logger.LogError(err)
 		}
 	}
-}
-
-func articlesIndexHandler(w http.ResponseWriter, r *http.Request) {
-	rows, err := db.Query("select * from articles")
-	logger.LogError(err)
-	defer rows.Close()
-
-	var articles []Article
-
-	for rows.Next() {
-		var article Article
-		err = rows.Scan(&article.ID, &article.Title, &article.Body)
-		logger.LogError(err)
-		articles = append(articles, article)
-	}
-
-	err = rows.Err()
-	logger.LogError(err)
-
-	tmpl, err := template.ParseFiles("resources/views/articles/index.gohtml")
-	logger.LogError(err)
-
-	err = tmpl.Execute(w, articles)
-	logger.LogError(err)
 }
 
 // ArticlesFormData 创建博文表单数据
@@ -336,7 +302,6 @@ func main() {
 	bootstrap.SetupDB()
 	router = bootstrap.SetupRoute()
 
-	router.HandleFunc("/articles", articlesIndexHandler).Methods("GET").Name("articles.index")
 	router.HandleFunc("/articles", articlesStoreHandler).Methods("POST").Name("articles.store")
 	router.HandleFunc("/articles/create", articleCreateHandler).Methods("GET").Name("articles.create")
 	router.HandleFunc("/articles/{id:[0-9]+}/edit", articlesEditHandler).Methods("GET").Name("articles.edit")
